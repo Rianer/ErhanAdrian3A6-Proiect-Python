@@ -2,7 +2,7 @@ from cards import Deck, Card
 from board import Card_Collumn, Board
 
 def testBoard():
-    b = Board()
+    b = Board(20, 50)
     b.show_board()
     col1 = int(input("C1:"))
     col2 = int(input("C2:"))

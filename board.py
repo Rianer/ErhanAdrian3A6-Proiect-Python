@@ -1,4 +1,5 @@
-from cards import Deck, Card
+from cards import Deck
+
 
 def check_cards(card1, card2):
     #card = (value, symbol)
@@ -53,17 +54,15 @@ class Card_Collumn:
         return str(self._cards)
     
 class Board:
-    _deck = None
-    _shelf = list()
-    _board = list()
-    _buffer_card = None
-
-    def __init__(self):
+    def __init__(self, col_gap, y_offset):
+        self._board = list()
+        self._shelf = list()
+        self._buffer_card = None
         self._deck = Deck()
         self._deck.shuffleDeck()
         for col_index in range(1,8):
             cards = self._deck.drawCards(col_index)
-            column = Card_Collumn(cards)
+            column = Game_Collumn(cards, (col_gap * col_index + (col_index-1)*89, y_offset))
             self._board.append(column)
     
 
@@ -85,4 +84,52 @@ class Board:
         else:
             return False
         
+# class Game_Board(Board):
+#     def __init__(self):
+#         super().__init__()
+
+class Game_Collumn(Card_Collumn):
+    def __init__(self, cards, position):
+        super().__init__(cards)
+        if type(position) == tuple and len(position) == 2:
+            self.position = position
+        else:
+            self.position = (0,0)
+        index = 0
+        self.rendered = True
+        for card in self._cards:
+            card.position = (self.position[0], self.position[1] + 10 * index)
+            index += 1
+    
+    #Overriden
+    def insert(self, cards):
+        if self.validate_move(cards):
+            cards_list = cards.get_cards()
+            last_position = self._cards[-1].position
+            index = 1
+            for card in cards_list:
+                card.position = (last_position[0], last_position[1] + (10 * index))
+                self._cards.append(card)
+    
+    def __str__(self) -> str:
+        return "[Reder={} at position {}]: ".format(self.rendered, self.position) + str(self._cards)
+
+    def is_cursor_on_collumn(self, cursor_coordinates):
+        if len(self._cards) == 0:
+            return False
+        if cursor_coordinates[0] < self.position[0] or cursor_coordinates[0] > (self.position[0] + 89):
+            return False
+        if cursor_coordinates[1] < self.position[1] or cursor_coordinates[1] > ((len(self._cards)-1)*10 + 120):
+            return False
+        return True
+    
+    def card_on_cursor(self, cursor_coordinates):
+        if not self.is_cursor_on_collumn():
+            return None
+        delta_y = self.position[1] - cursor_coordinates[1]
+        card_index = delta_y % 10
+        if card_index > len(self._cards)-1:
+            card_index = len(self._cards)-1
+        if self._cards[card_index].is_visible:
+            return Game_Collumn(self._cards[card_index:], cursor_coordinates)
     
