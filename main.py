@@ -5,9 +5,10 @@ from os import path
 #cards size 89x120 
 #colors
 TABLE_COLOR = (52, 162, 73)
+RED_COLOR = (255, 20, 0)
 
 #other constants
-CARD_BACK_TXTR = pg.image.load(path.join('Assets\Textures', 'Card_Back.png'))
+GAME_WON = pg.image.load(path.join('Assets\Textures', 'GAME_WON.png'))
 
 #display
 WIDTH, HEIGHT = 1200, 700
@@ -45,6 +46,13 @@ def draw_cards_in_hand():
     for card in game_board.moving_cards._cards:
         draw_card(card)
 
+def draw_card_slots():
+    for slot in game_board.slots:
+        WIN.blit(slot.texture, slot.position)
+        card = slot.get_top_card()
+        if card != None:
+            WIN.blit(card.texture, slot.position)
+
 def draw_deck_section():
     WIN.blit(game_board._deck.deck_base.texture, game_board._deck.deck_position)
     WIN.blit(game_board._deck.buffer_base.texture, game_board._deck.buffer_position)
@@ -59,14 +67,18 @@ def draw_deck_section():
 
 def draw_board():
     draw_deck_section()
+    draw_card_slots()
     for column in game_board._board:
         for card in column._cards:
             draw_card(card)
 
 def draw_window():
     WIN.fill(TABLE_COLOR)
-    draw_board()
-    draw_cards_in_hand()
+    if not game_board.game_won:
+        draw_board()
+        draw_cards_in_hand()
+    else:
+        WIN.blit(GAME_WON, (0, 0))
     pg.display.update()
 
 def main():

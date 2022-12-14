@@ -1,5 +1,5 @@
 from cards import Game_Deck
-from cards import Game_Card
+from cards import Game_Card, Game_Slot
 
 VERTICAL_CARD_GAP = 20
 
@@ -50,19 +50,21 @@ class Board:
         self.cards_in_hand = False
         self.moving_buffer = False
         self._board = list()
-        self._shelf = list()
+        self.slots = list()
+        self.game_won = False
         self.col_gap = col_gap
         self.y_offset = y_offset
         self._buffer_card = None
         self.moving_cards = None
         self.moving_cards_origin_col = None
-        # self.deck_position = 
-        # self._buffer_card_position = (self.deck_position[0]+col_gap+89, self.deck_position[1])
         self._deck = Game_Deck((col_gap, col_gap/2), col_gap+89)
         for col_index in range(1,8):
             cards = self._deck.draw_cards(col_index)
             column = Game_Collumn(cards, (col_gap * col_index + (col_index-1)*89, y_offset), True)
             self._board.append(column)
+        for symbol in range(0,4):
+            position = (self._board[3+symbol].position[0], self._deck.deck_position[1])
+            self.slots.append(Game_Slot(position, symbol))
         self._deck.initialize_game()
     
 
@@ -87,9 +89,55 @@ class Board:
         if position[1] < self._deck.buffer_position[1] or position[1] > self._deck.buffer_position[1] + 120:
             return False
         return True
+
+    def clicked_slots(self, position):
+        if self.cards_in_hand:
+                if len(self.moving_cards._cards) > 1:
+                    return -1
+        if position[1] < self._deck.deck_position[1] or position[1] > self._deck.deck_position[1] + 120:
+            return -2
+        index = 0
+        for slot in self.slots:
+            if position[0] >= slot.position[0] and position[0] <= slot.position[0] + 89:
+                return index
+            index += 1
+        return -2
     
+    def return_cards(self):
+        print("Returning Card")
+        card = self.moving_cards._cards[0]
+        if self.slots[card._symbol].card_taken:
+            self.slots[card._symbol].card_taken = False
+            card.position = self.slots[card._symbol].position
+            self.slots[card._symbol].insert_card(card)
+            return
+        if self.moving_buffer:
+            self.moving_cards._cards[0].position = self._deck.buffer_position
+            self._deck.buffer_deck.append(self.moving_cards._cards[0])
+        else:
+            self._board[self.moving_cards_origin_col].force_insert(self.moving_cards)
+
+    def confirm_placement(self):
+        if not self.moving_buffer:
+            self._board[self.moving_cards_origin_col].unhide_last()
+    
+    def reset_card_move(self):
+        self.cards_in_hand = False
+        self.moving_cards = None
+        self.moving_buffer = False
+        self.moving_cards_origin_col = -1
+    
+    def check_win_condition(self):
+        for slot in self.slots:
+            if len(slot.cards) != 13:
+                return False
+        self.game_won = True
+        return True
+
     def handle_mouse_click(self, mouse_position):
         index = 0
+        slot_clicked = self.clicked_slots(mouse_position)
+        
         for col in self._board:
             if col.is_cursor_on_collumn(mouse_position):#searching the column where the cursor clicked
                 if not self.cards_in_hand: #selecting cards to move
@@ -104,17 +152,10 @@ class Board:
                     if col.validate_move(self.moving_cards):
                         print("Valid Move")
                         col.force_insert(self.moving_cards)
-                        self._board[self.moving_cards_origin_col].unhide_last()
+                        self.confirm_placement()
                     else:
-                        print("Returning Card")
-                        if self.moving_buffer:
-                            self.moving_cards._cards[0].position = self._deck.buffer_position
-                            self._deck.buffer_deck.append(self.moving_cards._cards[0])
-                        else:
-                            self._board[self.moving_cards_origin_col].force_insert(self.moving_cards)
-                    self.cards_in_hand = False
-                    self.moving_cards = None
-                    self.moving_cards_origin_col = -1
+                        self.return_cards()
+                    self.reset_card_move()
                     return True
             index += 1
 
@@ -134,6 +175,23 @@ class Board:
             self._deck.buffer_deck.pop()
             print(buffer_col)
 
+        if slot_clicked >= 0:
+            if self.cards_in_hand:
+                if self.slots[slot_clicked].validate_insertion(self.moving_cards._cards[0]):
+                    self.slots[slot_clicked].insert_card(self.moving_cards._cards[0])
+                    self.confirm_placement()
+                    self.reset_card_move()
+            else:
+                
+                card = self.slots[slot_clicked].extract_card()
+                if card != None:
+                    card_col = Game_Collumn([card], card.position)
+                    self.cards_in_hand = True
+                    self.moving_cards = card_col
+                    self.slots[slot_clicked].card_taken = True
+
+        self.check_win_condition()
+        
 
 
 class Game_Collumn(Card_Collumn):

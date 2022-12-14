@@ -221,3 +221,41 @@ class Game_Deck:
         self.normalize_deck_positions()
         self.reveal_buffer()
         
+class Game_Slot:
+    def __init__(self, position, symbol):
+        self.cards = list()
+        self.position = position
+        self.symbol = symbol
+        self.card_taken = False
+        if self.symbol == 0:
+            self.name = 'Hearts'
+        if self.symbol == 2:
+            self.name = 'Tiles'
+        if self.symbol == 1:
+            self.name = 'Clovers'
+        if self.symbol == 3:
+            self.name = 'Pikes'
+        img_name = "Base_of_" + self.name + ".png"
+        self.texture = image.load(path.join('Assets\Textures', img_name))
+
+    def get_top_card(self):
+        if len(self.cards) == 0:
+            return None
+        return self.cards[-1]
+
+    def validate_insertion(self, card):
+        if card._symbol == self.symbol:
+            if card._value == 1 and len(self.cards) == 0:
+                return True
+            if card._value == self.get_top_card()._value + 1:
+                return True
+        return False
+    
+    def insert_card(self, card):
+        card.position = self.position
+        self.cards.append(card)
+    
+    def extract_card(self):
+        if len(self.cards) == 0:
+            return None
+        return self.cards.pop()
