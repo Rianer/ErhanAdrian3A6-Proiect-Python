@@ -17,7 +17,9 @@ class Card:
         self.translateValue()
     
     def translateValue(self):
-        if self._value > 1 and self._value<11:
+        if self._value == -1:
+            self._string_value = 'Base'
+        elif self._value > 1 and self._value<11:
             self._string_value = str(self._value)
         else:
             if self._value == 1: 
@@ -32,6 +34,8 @@ class Card:
     def translateSymbol(self):
         #even numbers = red color
         #odd numbers = black color
+        if self._symbol == -1:
+            self._string_symbol = 'Collumn'
         if self._symbol == 0:
             self._string_symbol = 'Hearts'
         if self._symbol == 2:
@@ -81,27 +85,32 @@ class Game_Card(Card):
         super().__init__(value, symbol)
         self.WIDTH = 89
         self.HEIGHT = 120
+        self.rendered = True
         self.position = (0,0) #left, right corner
+        self.is_base = value == -1
         img_name = self.getFullName() + '.png'
         self.texture = image.load(path.join('Assets\Textures', img_name))
         self.card_back = image.load(path.join('Assets\Textures', 'Card_Back.png'))
     
     def __str__(self):
         if not self.is_visible:
-            return "|Hidden| at {}".format(self.position)
-        return self.getFullName() + " at {}".format(self.position) 
+            return "|Hidden| at {}".format(self.position) + " <render = {}>".format(self.rendered)
+        return self.getFullName() + " at {}".format(self.position) + " <render = {}>".format(self.rendered)
     
     def __repr__(self):
         if not self.is_visible:
-            return "|Hidden| at {}".format(self.position) 
-        return self.getFullName() + " at {}".format(self.position) 
+            return "|Hidden| at {}".format(self.position) + " <render = {}>".format(self.rendered)
+        return self.getFullName() + " at {}".format(self.position) + " <render = {}>".format(self.rendered)
 
 class Deck:
-    _drawed = list()
-    cards = list()
-    size = 0
+    # _drawed = list()
+    # cards = list()
+    # size = 0
 
     def __init__(self):
+        self._drawed = list()
+        self.cards = list()
+        self.size = 0
         for symbol in range(0,4):
             for value in range(1,14):
                 self.cards.append(Game_Card(value, symbol))
@@ -111,6 +120,9 @@ class Deck:
         for card in self.cards:
             print("{} of {}".format(card.getStringValue(), card.getStringSymbol()))
     
+    def getAllCards(self):
+        return self.cards
+
     def shuffleDeck(self):
         shuffle(self.cards)
     
@@ -142,8 +154,70 @@ class Deck:
             drawedCards.append(self.drawLastCard())
         return drawedCards
 
-
     def replenishDeck(self):
         for card in self._drawed:
             self.cards.append(card)
             self.size += 1
+
+class Game_Deck:
+    def __init__(self, deck_coordinates, deck_spacing):
+        self.cards = Deck()
+        self.deck = list()
+        self.buffer_deck = list()
+        self.deck_position = deck_coordinates
+        self.buffer_position = (deck_coordinates[0] + deck_spacing, deck_coordinates[1])
+        self.deck_base = Game_Card(-1, -1)
+        self.deck_base.position = self.deck_position
+        self.buffer_base = Game_Card(-1, -1)
+        self.buffer_base.position = self.buffer_position
+        self.cards.shuffleDeck()
+    
+    def draw_cards(self, number):
+        return self.cards.drawCards(number)
+    
+    def reveal_deck(self):
+        if len(self.deck) < 1:
+            return
+        self.deck[-1].is_visible = True
+
+    def reveal_buffer(self):
+        if len(self.buffer_deck) < 1:
+            return
+        self.buffer_deck[-1].is_visible = True
+
+    def take_card(self):
+        self.buffer_deck.append(self.deck.pop())
+        self.reveal_buffer()
+        self.normalize_deck_positions()
+        # self.reveal_deck()
+
+    def return_deck(self):
+        for card in self.buffer_deck:
+            card.is_visible = False
+            card.position = self.deck_position
+        self.deck = self.buffer_deck[::-1]
+        self.buffer_deck = list()
+        
+
+    def get_deck_top(self):
+        if len(self.deck) < 1:
+            return None
+        return self.deck[-1]
+
+    def get_buffer_top(self):
+        if len(self.buffer_deck) < 1:
+            return None
+        return self.buffer_deck[-1]
+
+    def normalize_deck_positions(self):
+        for card in self.deck:
+            card.position = self.deck_position
+        for card in self.buffer_deck:
+            card.position = self.buffer_position
+
+    def initialize_game(self):
+        self.deck = self.cards.getAllCards()
+        # self.reveal_deck()
+        self.normalize_deck_positions()
+        self.reveal_buffer()
+        
