@@ -82,11 +82,14 @@ class Board:
         return True
     
     def clicked_buffer(self, position):
-        if self.cards_in_hand:
-            return False
         if position[0] < self._deck.buffer_position[0] or position[0] > self._deck.buffer_position[0] + 89:
             return False
         if position[1] < self._deck.buffer_position[1] or position[1] > self._deck.buffer_position[1] + 120:
+            return False
+        if self.cards_in_hand:
+            print('Clicked Buffer => Returning')
+            self.return_cards()
+            self.reset_card_move()
             return False
         return True
 

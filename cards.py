@@ -247,6 +247,8 @@ class Game_Slot:
         if card._symbol == self.symbol:
             if card._value == 1 and len(self.cards) == 0:
                 return True
+            if len(self.cards) == 0:
+                return False
             if card._value == self.get_top_card()._value + 1:
                 return True
         return False
